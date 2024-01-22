@@ -3,10 +3,11 @@
 #include <string.h>
 #include<windows.h>
 #include<ctype.h>
+#include <math.h>
 
 #define MAX_USERS 100
 #define DATABASE_FILE "user_database.txt"
-#define MAX 5
+#define MAX 10
 #define INFINITY 9999
 
 struct info
@@ -24,6 +25,27 @@ struct node
     struct info data;
     int distance;
 };
+struct bstNode {
+    char cityName[50];
+    int population;
+    struct bstNode* left;
+    struct bstNode* right;
+    int height;
+};
+
+
+
+struct StackNode
+{
+    struct bstNode* node;
+    struct StackNode* next;
+};
+
+struct Stack
+{
+    struct StackNode* top;
+};
+
 
 // Function prototypes
 void readCity(FILE *, struct node *);
@@ -37,8 +59,23 @@ int compareNumPatients(const struct node *, const struct node *);
 int compareNumDoctors(const struct node *, const struct node *);
 int KMPSearch(char  [], char []);
 void readFile(char* ,char  []);
+struct bstNode* searchCityAVL(struct bstNode* root, const char cityName[]);
+
+//.............................
+
+// Function prototypes for AVL tree
+struct bstNode* createAVLTree(struct node cities[], int numCities);
+struct bstNode* insertAVL(struct bstNode* root, struct node city);
+int maxof(int a, int b);
+int height(struct bstNode* node);
+int getBalance(struct bstNode* node);
+struct bstNode* rightRotate(struct bstNode* y);
+struct bstNode* leftRotate(struct bstNode* x);
+void preOrder(struct bstNode* root);
 
 
+
+//........................
 void Dijkstra(int Graph[MAX][MAX], int n, int start, struct node *city);
 
 void merge(struct node arr[], int l, int m, int r, int (*cmp)(const struct node *, const struct node *));
@@ -153,6 +190,7 @@ int main()
     int flag,flag1;
     int j;
     int num;
+    int traversal;
     int sortCh;
     char searchCity[15];
     char gfname[50];
@@ -183,8 +221,9 @@ int main()
     for(int j=0;j<num;j++)
             readCity(fp,&city[j]);
 fclose(fp);
-
+    struct bstNode* avlTreeRoot;
     int choice, choice2;
+    const char searchCityname[50];
     while (1&&flag!=1)
     {
         printf("\n\t\t\t\t\t\tMenu:\n");
@@ -211,7 +250,10 @@ switch (choice)
             printf("3--Find minimum distance to cover different cities from a city\n"); //kruskal
             printf("4--Sort cities.\n");                                               // insertion or selection sort
             printf("5--Search whether your city appears in health camp plan.\n");
-            printf("6--Logout\n");
+            printf("6--Display City With Lowest Hospitals\n");
+            printf("7--Avl trees \n");
+            printf("8--\n");
+            printf("9--Logout\n");
 
            printf("\nEnter your choice\n");
             scanf("%d", &choice2);
@@ -238,17 +280,7 @@ switch (choice)
                     scanf("%d", &source);
                     Dijkstra(graph, 5, source, city);
                     break;
-                case 3: printf("Enter graph file: ");
-                    scanf("%s", gfname);
-                    FILE *fp3 = fopen(gfname, "r");
-                    for (int i = 0; i < 5; i++)
-                    {
-                        for (int j = 0; j < 5; j++)
-                            fscanf(fp2, "%d", &graph[i][j]);
-                    }
-                    fclose(fp2);
-
-                    kruskalAlgo(5, graph);
+                case 3:
                     break;
                 case 4:
                     printf("Sort cities based on:\n");
@@ -308,8 +340,39 @@ switch (choice)
                         SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
                     }
                     break;
+                case 6 : displayCityWithLowestHospitals(city, num);
+                                    break;
 
-                case 6:
+                case 7 :  avlTreeRoot = createAVLTree(city, num);
+
+                            printf("Which Type of traversal You want\n");
+                            printf("1.PreOrder\n");
+                            printf("2.InOrder\n");
+                            printf("3.PostOrder\n");
+                            scanf("%d",&traversal);
+                            if(traversal==1)
+                            {
+                                iterativePreOrder(avlTreeRoot);
+                                 printf("\n");
+                            }
+                            else if(traversal==2)
+                             {
+                                 iterativeInOrder(avlTreeRoot);
+                                    printf("\n");
+                             }
+                             else if(traversal==3)
+                             {
+                                 iterativePostOrder(avlTreeRoot);
+                                     printf("\n");
+                             }
+                            break;
+
+                case 8 :
+
+
+    return 0;
+
+                case 9:
                     printf("");
                     const WORD darkGreen = 2;
                     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -416,12 +479,10 @@ void Dijkstra(int Graph[MAX][MAX], int n, int start,struct node *city)
     count++;
   }
 
-  mergeSort(city, 0, n - 1,compareCityCode);
   // Printing the distance
   for (i = 0; i < n; i++)
     if (i != start)
     {
-
       printf("\nDistance from %s to %s : %d",city[start].data.cityName,city[i].data.cityName, distance[i]);
     }
 }
@@ -648,88 +709,295 @@ void readFile(char fname [],char content [])
     // Close the file
     fclose(fp);
 }
+void displayCityWithLowestHospitals(struct node *cities, int numCities)
+ {
+    int minHospitals = cities[0].data.numHospitals;
+    int minIndex = 0;
 
-int comparator(const void* p1, const void* p2)
-{
-    const int(*x)[3] = p1;
-    const int(*y)[3] = p2;
-
-    return (*x)[2] - (*y)[2];
-}
-
-// Initialization of parent[] and rank[] arrays
-void makeSet(int parent[], int rank[], int n)
-{
-    for (int i = 0; i < n; i++) {
-        parent[i] = i;
-        rank[i] = 0;
-    }
-}
-
-// Function to find the parent of a node
-int findParent(int parent[], int component)
-{
-    if (parent[component] == component)
-        return component;
-
-    return parent[component]
-           = findParent(parent, parent[component]);
-}
-
-// Function to unite two sets
-void unionSet(int u, int v, int parent[], int rank[], int n)
-{
-    // Finding the parents
-    u = findParent(parent, u);
-    v = findParent(parent, v);
-
-    if (rank[u] < rank[v]) {
-        parent[u] = v;
-    }
-    else if (rank[u] > rank[v]) {
-        parent[v] = u;
-    }
-    else {
-        parent[v] = u;
-
-        // Since the rank increases if
-        // the ranks of two sets are same
-        rank[u]++;
-    }
-}
-
-// Function to find the MST
-void kruskalAlgo(int n, int edge[n][3])
-{
-    // First we sort the edge array in ascending order
-    // so that we can access minimum distances/cost
-    qsort(edge, n, sizeof(edge[0]), comparator);
-
-    int parent[n];
-    int rank[n];
-
-    // Function to initialize parent[] and rank[]
-    makeSet(parent, rank, n);
-
-    // To store the minimun cost
-    int minCost = 0;
-
-    printf("Following are the edges in the constructed MST\n");
-    for (int i = 0; i < n; i++) {
-        int v1 = findParent(parent, edge[i][0]);
-        int v2 = findParent(parent, edge[i][1]);
-        int wt = edge[i][2];
-
-        // If the parents are different that
-        // means they are in different sets so
-        // union them
-        if (v1 != v2) {
-            unionSet(v1, v2, parent, rank, n);
-            minCost += wt;
-            printf("%d -- %d == %d\n", edge[i][0],
-                   edge[i][1], wt);
+    // Find the city with the lowest number of hospitals
+    for (int i = 1; i < numCities; ++i) {
+        if (cities[i].data.numHospitals < minHospitals) {
+            minHospitals = cities[i].data.numHospitals;
+            minIndex = i;
         }
     }
 
-    printf("Minimum Cost Spanning Tree: %d\n", minCost);
+          const WORD lightRedBackground = BACKGROUND_RED | BACKGROUND_INTENSITY;
+          HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+          SetConsoleTextAttribute(hConsole, lightRedBackground);
+
+
+    // Display the city with the lowest number of hospitals
+    printf("City with the lowest number of hospitals:\n");
+    displayCity(&cities[minIndex]);
+
+    SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+}
+
+
+//............................................
+struct bstNode* createAVLTree(struct node cities[], int numCities)
+{
+    struct bstNode* root = NULL;
+
+    for (int i = 0; i < numCities; i++) {
+        root = insertAVL(root, cities[i]);
+    }
+
+    return root;
+}
+
+// Function to insert a node into AVL tree
+struct bstNode* insertAVL(struct bstNode* root, struct node city)
+{
+    if (root == NULL) {
+        struct bstNode* newNode = (struct bstNode*)malloc(sizeof(struct bstNode));
+        strcpy(newNode->cityName, city.data.cityName);
+        newNode->population = city.data.population;
+        newNode->left = newNode->right = NULL;
+        newNode->height = 1;
+        return newNode;
+    }
+
+    // Perform normal BST insertion
+    if (strcmp(city.data.cityName, root->cityName) < 0)
+        root->left = insertAVL(root->left, city);
+    else if (strcmp(city.data.cityName, root->cityName) > 0)
+        root->right = insertAVL(root->right, city);
+    else // Duplicate city names are not allowed
+        return root;
+
+    // Update height of current node
+    root->height = 1 + maxof(height(root->left), height(root->right));
+
+    // Get the balance factor and perform rotations if needed
+    int balance = getBalance(root);
+
+    // Left Heavy
+    if (balance > 1) {
+        if (strcmp(city.data.cityName, root->left->cityName) < 0)
+            return rightRotate(root);
+        else if (strcmp(city.data.cityName, root->left->cityName) > 0) {
+            root->left = leftRotate(root->left);
+            return rightRotate(root);
+        }
+    }
+
+    // Right Heavy
+    if (balance < -1) {
+        if (strcmp(city.data.cityName, root->right->cityName) > 0)
+            return leftRotate(root);
+        else if (strcmp(city.data.cityName, root->right->cityName) < 0) {
+            root->right = rightRotate(root->right);
+            return leftRotate(root);
+        }
+    }
+
+    return root;
+}
+// Utility function to get the maximum of two integers
+int maxof(int a, int b)
+{
+    if(a>b)
+        return a;
+    else
+        return b;
+}
+
+// Utility function to get the height of a node
+int height(struct bstNode* node)
+{
+    if (node == NULL)
+        return 0;
+    return node->height;
+}
+
+// Utility function to get the balance factor of a node
+int getBalance(struct bstNode* node)
+{
+    if (node == NULL)
+        return 0;
+    return height(node->left) - height(node->right);
+}
+
+// Right rotate a subtree rooted with y
+struct bstNode* rightRotate(struct bstNode* y)
+ {
+    struct bstNode* x = y->left;
+    struct bstNode* T2 = x->right;
+
+    // Perform rotation
+    x->right = y;
+    y->left = T2;
+
+    // Update heights
+    y->height = max(height(y->left), height(y->right)) + 1;
+    x->height = max(height(x->left), height(x->right)) + 1;
+
+    return x;
+}
+
+// Left rotate a subtree rooted with x
+struct bstNode* leftRotate(struct bstNode* x)
+ {
+    struct bstNode* y = x->right;
+    struct bstNode* T2 = y->left;
+
+    // Perform rotation
+    y->left = x;
+    x->right = T2;
+
+    // Update heights
+    x->height = max(height(x->left), height(x->right)) + 1;
+    y->height = max(height(y->left), height(y->right)) + 1;
+
+    return y;
+}
+
+
+/*// Print preOrder traversal of AVL tree
+void preOrder(struct bstNode* root)
+ {
+    if (root != NULL) {
+
+        preOrder(root->left);
+        printf("%s ", root->cityName);
+        preOrder(root->right);
+    }
+}   */
+
+struct StackNode* createStackNode(struct bstNode* node)
+{
+    struct StackNode* stackNode = (struct StackNode*)malloc(sizeof(struct StackNode));
+    stackNode->node = node;
+    stackNode->next = NULL;
+    return stackNode;
+}
+
+struct Stack* createStack()
+{
+    struct Stack* stack = (struct Stack*)malloc(sizeof(struct Stack));
+    stack->top = NULL;
+    return stack;
+}
+
+void push(struct Stack* stack, struct bstNode* node)
+{
+    struct StackNode* stackNode = createStackNode(node);
+    stackNode->next = stack->top;
+    stack->top = stackNode;
+}
+
+struct bstNode* pop(struct Stack* stack)
+{
+    if (stack->top == NULL)
+    {
+        return NULL;
+    }
+    struct StackNode* temp = stack->top;
+    stack->top = stack->top->next;
+    struct bstNode* poppedNode = temp->node;
+    free(temp);
+    return poppedNode;
+}
+
+void iterativePreOrder(struct bstNode* root)
+{
+    if (root == NULL)
+    {
+        return;
+    }
+
+    struct Stack* stack = createStack();
+    struct bstNode* current = root;
+
+    while (current != NULL || stack->top != NULL)
+    {
+        while (current != NULL)
+        {
+            printf("%s ", current->cityName);
+             if(stack2->top != NULL)
+            {
+                printf("-->  ");
+            } 
+            push(stack, current);
+            current = current->left;
+        }
+
+        current = pop(stack);
+        current = current->right;
+    }
+
+    free(stack);
+}
+
+
+
+void iterativeInOrder(struct bstNode* root)
+ {
+    if (root == NULL) {
+        return;
+    }
+
+    struct Stack* stack = createStack();
+    struct bstNode* current = root;
+
+    while (current != NULL || stack->top != NULL) {
+        while (current != NULL) {
+            push(stack, current);
+            current = current->left;
+        }
+
+        current = pop(stack);
+        printf("%s ", current->cityName);
+         if(stack2->top != NULL)
+            {
+                printf("-->  ");
+            } 
+        current = current->right;
+    }
+
+    free(stack);
+}
+
+void iterativePostOrder(struct bstNode* root)
+ {
+    if (root == NULL)
+    {
+        return;
+    }
+
+    struct Stack* stack1 = createStack();
+    struct Stack* stack2 = createStack();
+    struct bstNode* current = root;
+
+    push(stack1, current);
+
+    while (stack1->top != NULL) 
+        {
+        current = pop(stack1);
+        push(stack2, current);
+
+        if (current->left != NULL) {
+            push(stack1, current->left);
+        }
+
+        if (current->right != NULL) 
+            {
+            push(stack1, current->right);
+        }
+    }
+
+    while (stack2->top != NULL)
+        {
+        current = pop(stack2);
+        printf("%s ", current->cityName);
+        if(stack2->top != NULL)
+            {
+                printf("-->  ");
+            } 
+    }
+
+    free(stack1);
+    free(stack2);
 }
